@@ -23,6 +23,54 @@ sudo docker-compose up -d --build --force-recreate && sudo docker-compose logs -
 - `INCLUDE_SELF` - whether the current container (`log-cleaner` by default) should also have it's logs cleaned, defaults to `TRUE`
 - `SELF_NAME` - name of the current container (defaults to `log_cleaner`)
 
+
+***Some examples:***
+
+The following `docker-compose.yml` example will clear the logs of containers with names `mongo nginx`
+every 3600 seconds (hourly)
+```
+  environment:
+    - CLEAN_FREQUENCY=3600
+    - CONTAINERS_T0_CLEAN=mongo nginx
+    - INCLUDE_SELF=FALSE
+```
+
+
+The following `docker-compose.yml` example will clear the logs of containers with names `mongo nginx log-cleaner`
+every 3600 seconds (hourly)
+```
+  environment:
+    - CLEAN_FREQUENCY=3600
+    - CONTAINERS_T0_CLEAN=mongo nginx
+    - INCLUDE_SELF=TRUE
+```
+
+
+The following `docker-compose.yml` example will clear the logs of containers with names `mongo nginx my-logger-cleaner`
+every 3600 seconds (hourly)
+```
+version: '2'
+
+services:
+
+  log-cleaner:
+    image: log-cleaner:latest
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: my-logger-cleaner
+    restart: unless-stopped
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - /var/lib/docker/containers/:/var/lib/docker/containers/
+    environment:
+    - CLEAN_FREQUENCY=3600
+    - CONTAINERS_T0_CLEAN=mongo nginx
+    - INCLUDE_SELF=TRUE
+    - SELF_NAME=my-logger-cleaner
+```
+
+
 ### Notes
 
   - This project is not designed as a replacement for the [docker-compose logging directives](https://docs.docker.com/compose/compose-file/#/logging)
