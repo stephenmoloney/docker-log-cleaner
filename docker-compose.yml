@@ -1,0 +1,19 @@
+version: '2'
+
+services:
+
+  log-cleaner:
+    image: log-cleaner:latest
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: log-cleaner
+    restart: unless-stopped
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - /var/lib/docker/containers/:/var/lib/docker/containers/
+    environment:
+      - CLEAN_FREQUENCY=20
+      - CONTAINERS_T0_CLEAN=ALL
+      - INCLUDE_SELF=TRUE
+      - SELF_NAME=log-cleaner
