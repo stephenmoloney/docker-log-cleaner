@@ -20,28 +20,39 @@ get_container_ids() {
       CONTAINER_IDS+=("$(get_container_id $container)")
     done
   else
-    for container in "${CONTAINERS_T0_CLEAN}"; do
+    CONTAINERS_T0_CLEAN=("$(echo ${CONTAINERS_T0_CLEAN})") && \
+    for container in ${CONTAINERS_T0_CLEAN}; do
       CONTAINER_IDS+=("$(get_container_id $container)")
     done
   fi && \
-  CONTAINER_IDS=$(remove_self "${CONTAINER_IDS[@]}") && \
   echo "${CONTAINER_IDS[@]}";
 }
 
 remove_self(){
+  CONTAINER_IDS=("$@") && \
   self_id=$(get_container_id ${SELF_NAME}) && \
-  CONTAINER_IDS=$1 && \
   CONTAINER_IDS_WITHOUT_SELF=() && \
-  for id in "${CONTAINER_IDS}"; do
+  for id in ${CONTAINER_IDS}; do
     if [ "$self_id" != "$id" ]; then
       CONTAINER_IDS_WITHOUT_SELF+=("$id")
     fi
   done && \
-  if [ "$INCLUDE_SELF" == "TRUE" ]; then
-    echo "${CONTAINER_IDS[@]}";
+  echo "${CONTAINER_IDS_WITHOUT_SELF[@]}";
+}
+
+add_self(){
+  CONTAINER_IDS=("$@") && \
+  self_id=$(get_container_id ${SELF_NAME}) && \
+  CONTAINER_IDS_WITH_SELF=() && \
+  if [[ "${CONTAINER_IDS[*]}" =~ *"$self_id"* ]]; then
+    CONTAINER_IDS_WITH_SELF=$CONTAINER_IDS;
   else
-    echo "${CONTAINER_IDS_WITHOUT_SELF[@]}";
-  fi
+    for id in ${CONTAINER_IDS}; do
+      CONTAINER_IDS_WITH_SELF+=("$id");
+    done
+    CONTAINER_IDS_WITH_SELF+=("$self_id");
+  fi && \
+  echo "${CONTAINER_IDS_WITH_SELF[@]}";
 }
 
 ensure_clean_s6_dir(){
@@ -95,7 +106,12 @@ EOF
 start(){
   # Give the containers a chance to start before initiating process, hence `sleep 5s`
   sleep 5s && \
-  IDS=$(get_container_ids) && \
+  IDS="$(get_container_ids)" && \
+  if [ "$INCLUDE_SELF" == "TRUE" ]; then
+    IDS=$(add_self "${IDS[@]}");
+  else
+    IDS=$(remove_self "${IDS[@]}");
+  fi && \
   ensure_clean_s6_dir && \
   for id in ${IDS}; do
     create_s6svscan_folder && \
