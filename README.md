@@ -2,6 +2,7 @@
 
 ### Features
 
+  - A standalone docker container.
   - Designed to clear the log files for a docker container at specified intervals.
   - Can be used for clearing logs in multiple containers.
 
@@ -24,7 +25,7 @@ sudo docker-compose up -d --build --force-recreate && sudo docker-compose logs -
 
 ## Notes
 
-  - This project is not designed as a replacement for the []docker-compose logging directives](https://docs.docker.com/compose/compose-file/#/logging)
+  - This project is not designed as a replacement for the [docker-compose logging directives](https://docs.docker.com/compose/compose-file/#/logging)
   but rather as an adjunct to the logging directive.
   - If this feature is implemented in `docker` then this project will become defunct and hopefully this will be the case. There
   was an [issue about this](https://github.com/docker/compose/issues/1083) in `docker/compose` in github.
