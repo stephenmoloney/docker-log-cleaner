@@ -1,0 +1,126 @@
+#!/usr/bin/env bash
+
+
+get_container_name(){
+  id=$1;
+  name=$(docker inspect $id 2> /dev/null | grep Name | head -1 | tr -d ' ' 2> /dev/null | cut -c10-1000 | rev | cut -c3-1000 | rev) && \
+  echo $name;
+}
+
+
+get_container_id(){
+  name=$1;
+  id=$(docker inspect $name 2> /dev/null | grep Id | tr -d ' ' 2> /dev/null | cut -c7-70) && \
+  echo $id;
+}
+
+
+get_containers_to_watch(){
+  if [ "${CONTAINERS_T0_CLEAN}" == "ALL" ]; then
+    CONTAINERS_T0_CLEAN=$(docker ps -a -q | tr '\n' ' ' 2> /dev/null)
+  else
+    CONTAINERS_T0_CLEAN=("$(echo ${CONTAINERS_T0_CLEAN})")
+  fi
+  echo "${CONTAINERS_T0_CLEAN[@]}";
+}
+
+
+get_container_ids() {
+  CONTAINERS_T0_CLEAN=$(get_containers_to_watch) && \
+  CONTAINER_IDS=() && \
+  for container in ${CONTAINERS_T0_CLEAN}; do
+    CONTAINER_IDS+=("$(get_container_id $container)")
+  done && \
+  echo "${CONTAINER_IDS[@]}";
+}
+
+
+remove_self(){
+  CONTAINER_IDS=("$@") && \
+  self_id=$(get_container_id ${SELF_NAME}) && \
+  CONTAINER_IDS_WITHOUT_SELF=() && \
+  for id in ${CONTAINER_IDS}; do
+    if [ "$self_id" != "$id" ]; then
+      CONTAINER_IDS_WITHOUT_SELF+=("$id")
+    fi
+  done && \
+  echo "${CONTAINER_IDS_WITHOUT_SELF[@]}";
+}
+
+
+add_self(){
+  CONTAINER_IDS=("$@") && \
+  self_id=$(get_container_id ${SELF_NAME}) && \
+  CONTAINER_IDS_WITH_SELF=() && \
+  if [[ "${CONTAINER_IDS[*]}" == *"$self_id"* ]]; then
+    CONTAINER_IDS_WITH_SELF=$CONTAINER_IDS;
+  else
+    for id in ${CONTAINER_IDS}; do
+      CONTAINER_IDS_WITH_SELF+=("$id");
+    done
+    CONTAINER_IDS_WITH_SELF+=("$self_id");
+  fi && \
+  echo "${CONTAINER_IDS_WITH_SELF[@]}";
+}
+
+
+ensure_clean_s6_dir(){
+  if [ -d /etc/s6/ ]; then
+    rm -R /etc/s6/
+  fi
+}
+
+
+create_s6svscan_folder(){
+  if [ ! -d /etc/s6/.s6-svscan/finish ]; then
+    echo "Creating file /etc/s6/.s6-svscan/finish ..." && \
+    mkdir -p /etc/s6/.s6-svscan/ && touch /etc/s6/.s6-svscan/finish && chmod +x /etc/s6/.s6-svscan/finish && \
+    cat > /etc/s6/.s6-svscan/finish << EOF
+#!/bin/bash
+echo ".s6-svscan/finish triggered at \$(date +"%d-%m-%Y %H:%M:%S")..." && /bin/true;
+EOF
+  fi
+}
+
+
+create_s6_service(){
+  id=$1;
+  name=$(get_container_name $id);
+
+  if [ ! -e /etc/s6/${id}/finish ]; then
+    echo "Creating file /etc/s6/${id}/finish ..." && \
+    mkdir -p /etc/s6/${id}/ && touch /etc/s6/${id}/finish && chmod +x /etc/s6/${id}/finish
+  fi
+  if [ ! -e /etc/s6/${id}/run ]; then
+    echo "Creating file /etc/s6/${id}/run ..." && \
+    mkdir -p /etc/s6/${id}/ && touch /etc/s6/${id}/run && chmod +x /etc/s6/${id}/run
+  fi
+
+  cat > /etc/s6/${id}/finish << EOF
+#!/bin/bash
+/bin/true
+EOF
+
+  cat > /etc/s6/${id}/run << EOF
+#!/bin/bash
+sleep ${CLEAN_FREQUENCY}s && \
+if [ -e /var/lib/docker/containers/${id}/${id}-json.log ]; then
+  echo "clearing the logs from the $name container and the /var/lib/docker/containers/${id}/${id}-json.log file at \$(date +"%d-%m-%Y %H:%M:%S")..." && \
+  printf '' > /var/lib/docker/containers/${id}/${id}-json.log
+fi
+EOF
+}
+
+
+create_s6_watch_service(){
+  if [ ! -d /etc/s6/watcher/ ]; then
+    mkdir -p /etc/s6/watcher/ && \
+    echo "Creating file /etc/s6/watcher/finish ..." && \
+    touch /etc/s6/watcher/finish && chmod +x /etc/s6/watcher/finish && \
+    echo "Creating file /etc/s6/watcher/run ..." && \
+    mkdir -p /etc/s6/watcher/ && touch /etc/s6/watcher/run && chmod +x /etc/s6/watcher/run
+  fi
+
+  cat /scripts/watcher/finish > /etc/s6/watcher/finish
+  cat /scripts/watcher/run > /etc/s6/watcher/run
+}

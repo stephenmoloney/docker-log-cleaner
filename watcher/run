@@ -1,0 +1,40 @@
+#!/bin/bash
+
+source /scripts/functions && \
+CONTAINER_NAMES=$(get_containers_to_watch);
+
+inotifywait --monitor --event create --event delete --format %e^%f "/var/lib/docker/containers/" |
+  while read REPSONSE; do
+
+    IFS='^' read -ra ARR <<< "$REPSONSE" && \
+    EVENT="${ARR[0]}" && \
+    ID="${ARR[1]}" && \
+    sleep 3s && \
+    CONTAINER_NAME=$(get_container_name $ID)
+
+    if [[ "$EVENT" == "DELETE,ISDIR" ]]; then
+      echo "A directory /var/lib/docker/containers/$ID has been deleted..." && \
+      if [ -d /etc/s6/$ID ]; then
+        s6-svc -dwD /etc/s6/$ID/ && \
+        rm -r /etc/s6/$ID && \
+        s6-svscanctl -an /etc/s6 && \
+        echo "/etc/s6/$ID/ service stopped at $(date +"%H:%M:%S %d-%m-%Y")"
+      else
+        echo "ignoring directory changes, the /etc/s6/$ID/ service does not exist"
+      fi
+    fi
+
+    if [[ "$EVENT" == "CREATE,ISDIR" && "$CONTAINER_NAME" != "" ]]; then
+      if [[ "${CONTAINER_NAMES[*]}" == *"$CONTAINER_NAME"* ]]; then
+        echo "A directory /var/lib/docker/containers/$ID has been created..." && \
+        echo "$CONTAINER_NAME is a container under watch as another s6 service..." && \
+        create_s6_service $ID && \
+        s6-svscanctl -a /etc/s6/ && \
+        echo "/etc/s6/$ID/ service started at $(date +"%H:%M:%S %d-%m-%Y")"
+      else
+        echo "ignoring directory changes, container $CONTAINER_NAME is not under watch... "
+      fi
+    fi
+
+
+  done
