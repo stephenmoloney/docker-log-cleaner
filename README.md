@@ -51,6 +51,11 @@ services:
       - CLEAN_FREQUENCY=3600
       - CONTAINERS_T0_CLEAN=mongo nginx
       - INCLUDE_SELF=FALSE
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "1m"
+        max-file: "1"
 ```
 
 
@@ -75,6 +80,11 @@ services:
       - CLEAN_FREQUENCY=3600
       - CONTAINERS_T0_CLEAN=mongo nginx
       - INCLUDE_SELF=TRUE
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "1m"
+        max-file: "1"
 ```
 
 
@@ -100,6 +110,11 @@ services:
     - CONTAINERS_T0_CLEAN=mongo nginx
     - INCLUDE_SELF=TRUE
     - SELF_NAME=my-logger-cleaner
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "1m"
+        max-file: "1"
 ```
 
 
