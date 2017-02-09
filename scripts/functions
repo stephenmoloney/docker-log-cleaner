@@ -10,25 +10,25 @@ get_container_name(){
 
 get_container_id(){
   name=$1;
-  id=$(docker inspect $name 2> /dev/null | grep Id | tr -d ' ' 2> /dev/null | cut -c7-70) && \
+  id=$(docker inspect $name 2> /dev/null | grep Id | head -1 | tr -d ' ' 2> /dev/null | cut -c7-70) && \
   echo $id;
 }
 
 
 get_containers_to_watch(){
   if [ "${CONTAINERS_T0_CLEAN}" == "ALL" ]; then
-    CONTAINERS_T0_CLEAN=$(docker ps -a -q | tr '\n' ' ' 2> /dev/null)
+    local CONTAINERS_T0_CLEAN_LOCAL=$(docker ps -a -q | tr '\n' ' ' 2> /dev/null)
   else
-    CONTAINERS_T0_CLEAN=("$(echo ${CONTAINERS_T0_CLEAN})")
+    local CONTAINERS_T0_CLEAN_LOCAL=("$(echo ${CONTAINERS_T0_CLEAN})")
   fi
-  echo "${CONTAINERS_T0_CLEAN[@]}";
+  echo "${CONTAINERS_T0_CLEAN_LOCAL[@]}";
 }
 
 
 get_container_ids() {
-  CONTAINERS_T0_CLEAN=$(get_containers_to_watch) && \
+  local CONTAINERS_T0_CLEAN_LOCAL=$(get_containers_to_watch) && \
   CONTAINER_IDS=() && \
-  for container in ${CONTAINERS_T0_CLEAN}; do
+  for container in ${CONTAINERS_T0_CLEAN_LOCAL}; do
     CONTAINER_IDS+=("$(get_container_id $container)")
   done && \
   echo "${CONTAINER_IDS[@]}";
