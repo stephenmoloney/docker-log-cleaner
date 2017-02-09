@@ -38,7 +38,7 @@ version: '2'
 services:
 
   log-cleaner:
-    image: smoloney/log-cleaner:latest
+    image: smoloney/docker-log-cleaner:latest
     build:
       context: .
       dockerfile: Dockerfile
@@ -67,7 +67,7 @@ version: '2'
 services:
 
   log-cleaner:
-    image: smoloney/log-cleaner:latest
+    image: smoloney/docker-log-cleaner:latest
     build:
       context: .
       dockerfile: Dockerfile
@@ -96,7 +96,7 @@ version: '2'
 services:
 
   log-cleaner:
-    image: smoloney/log-cleaner:latest
+    image: smoloney/docker-log-cleaner:latest
     build:
       context: .
       dockerfile: Dockerfile
